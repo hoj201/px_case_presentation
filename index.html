@@ -1,0 +1,348 @@
+<!doctype html>
+<html>
+	<head>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+		<title>reveal.js</title>
+
+		<link rel="stylesheet" href="dist/reset.css">
+		<link rel="stylesheet" href="dist/reveal.css">
+		<link rel="stylesheet" href="dist/theme/moon.css">
+
+		<!-- Theme used for syntax highlighted code -->
+		<link rel="stylesheet" href="plugin/highlight/monokai.css">
+	</head>
+	<body>
+		<div class="reveal">
+			<div class="slides">
+				<section>
+					<h3>Machine Learning for Power X - Water</h3>
+					<p>Henry O. Jacobs</p>
+					<p>May 28, 2021</p>
+					<iframe src="https://giphy.com/embed/l0Ex3TbuoETxNAMfe" width="480" height="270" frameBorder="0" class="giphy-embed" allowFullScreen></iframe>
+					<p style="font-size:12px"><a href="https://giphy.com/gifs/animation-2d-l0Ex3TbuoETxNAMfe"> animation by Amanda Bonaito</a></p>
+				</section>
+				<section>
+					<h2>TLDR</h2>
+					<ul>
+						<li class="fragment fade-in-then-semi-out">Calibrate via direct measurment</li>
+						<li class="fragment fade-in-then-semi-out">1D image-processing... meh.</li>
+						<li class="fragment fade-in-then-semi-out">event based model... yay.</li>
+						<li class="fragment fade-in-then-semi-out">clustering saves us from training too many models</li>
+						<li class="fragment fade-in-then-semi-out">coin-flip math to incorporate user-feedback</li>
+					</ul>
+				</section>
+				<section>
+					<section>
+						<h2> Calibration</h2>
+						<ol>
+							<li> <p class="fragment highlight-current-red">
+								Press the "Calibration button" on the PowerX app </p> </li>
+							<li> <p class="fragment highlight-current-red"> 
+								Fill the PowerX provided container to fill line. </p> </li>
+							<li> <p class="fragment highlight-current-red"> 
+								Press "Done".</p></li>
+						</ol>
+						<img class="r-stretch" src="images/measuring_cup.jpg">
+					</section>
+					<section>
+						<h2>???</h2>
+						<ul>
+							<li>Why not have the user provide pipe-type and dimension?</li>
+							<li>How much water?</li>
+							<li>Leaks?</li>
+							<li>Noise?</li>
+						</ul>
+					</section>
+					<section>
+						<h2>How to model sensor noise</h2>
+						<ol>
+							<li> Observe sensor readings against known quantity of fluid</li>
+							<li> Randomize over devices/pipes/faucets </li>
+							<li> Fit a classical distribution to the data</li>
+						</ol>
+						[image of Gamma fit fit]
+						Given this you can run the statistical test:
+						What what is the probability of a calibrated device having an average error of \> 1\%
+					</section>
+				</section>
+				<section>
+					<h2>Plato's Cave</h2>
+						<div class="r-stack">
+							<img class="fragment fade-in-then-out" src="images/plato.svg">
+							<img class="fragment fade-in-then-out" src="images/plato_triangle.svg">
+							<img class="fragment fade-in-then-out" src="images/plato_broken.svg">
+						</div>
+				</section>				
+				<section data-markdown>
+					<textarea data-template>
+						## ML @ Power X
+						X = "sensor readings"
+
+						Y = "time windows when an outlet is active + water usage"
+
+						![water_usage](https://www.epa.gov/sites/production/files/styles/medium/public/2017-02/ws-ourwater-water-pie-chart-version-two_0.png)
+
+						---
+						## ML @ Power X
+						```json
+						X = [0, 0, 22, ...], t=[datetime(year=2021...
+						```
+
+						```python
+						Y = {
+							"class": {"washer": 0.1, "faucet": 0.2, "dishwasher":0.7},
+							"start": datetime(year=2021,
+								month=5, day=24, hour=5,
+								minute=23, second=3,
+								timezone='UTC')
+							"end": datetime(year=2021,
+								month=5, day=24, hour=5,
+								minute=24, second=38,
+								timezone='UTC')
+						},
+						...
+						```
+						---
+						## Consider
+
+						- timezone (to convert from UTC)
+						- location
+						- weather
+						- size of household
+
+						---
+
+						### Raw data
+
+						![lineplot](images/powerx_lineplot.jpeg)
+
+					</textarea>
+				</section>
+				<section>
+					<section>
+						<h2 class="r-fit-text">mediocre ideas</h2>
+					</section>
+					<section>
+					<h2>Computer vision model </h2>
+
+					<img src="https://i.imgur.com/5Q0aq82.jpg">
+					<p>from arXiv/abs/1506.02640</p>
+					</section>
+					<section>
+					<h2>Spotify inspired</h2>
+
+					<img src="images/640px-Spectrogram-19thC.png">
+					<p>
+						People at Spotify might know how to detect what instrument
+						is playing and when.
+					</p>
+					</section>
+					<section>
+						<h2>Critiques of CV inspired models</h2>
+						<ul>
+							<li><p> events must conclude prior to prediction </p></li>
+							<li><p class="fragment"> munges arbitrary timescales </p></li>
+							<li><p class="fragment"> might perform badly for events with variable time-scales (e.g. showers) </p></li>
+							<li><p class="fragment"> opaque </p></li>
+						</ul>
+					</section>
+				</section>
+				<section>
+					<section>
+						<h2>Proposed solution</h2>
+						<ol>
+							<li>Detect start times.</li>
+							<li>Given a start time, detect end time.</li>
+							<li>Classify the outlet type and water-usage.</li>
+						</ol>
+					</section>
+					<section>
+						<h2>Architecture</h2>
+						<img class="r-fit-image" src="images/pipeline.svg">
+						<!-- ideally each process should be $O(1)$ in space and time -->
+					</section>
+					<section>
+						<h2>Start time detection</h2>
+							<p>
+							Consider a convolution $x \stackrel{\kappa}{\mapsto} z$
+							$$
+								z(t) = \sum_{k=0}^{N} \kappa(k) x(t-k)
+							$$
+						</p>
+					</section>
+					<section>
+						<h2>Convolution</h2>
+						<img src="images/convolution.svg">
+					</section>
+					<section>
+						<h2>Open window classification</h2>
+						RNN, rolling-window CNN, combination of both.
+						<img src="images/Basic-RNN-structure.ppm">
+						<img src="images/pipeline.svg">
+					</section>
+					<section>
+						<h2>End time detection</h2>
+						<iframe src="https://giphy.com/embed/kGhsld1MnajNeGubZ8" width="480" height="300" frameBorder="0" class="giphy-embed" allowFullScreen></iframe>
+						<p style="font-size:15px"><a href="https://giphy.com/gifs/deja-vu-dejavu-dejavuapp-kGhsld1MnajNeGubZ8">via GIPHY</a></p>
+					</section>
+					<section>
+						<h2>Window classification</h2>
+						<div class="fragment">
+						<p>Choose features</p>
+						<ul>
+							<li>window length</li>
+							<li>initial/final jump size</li>
+							<li>total water consumed (??)</li>
+							<li>max/min/mean values of convolved signal</li>
+							<li> ... </li>
+						</ul>
+						</div>
+						<p class="fragment">Then use logistic regression on $\mathbb{R}^n$.</p>
+					</section>
+					<section>
+						<h2>Overview</h2>
+						<img src="images/pipeline.svg">
+					</section>
+					<section>
+						<h2>Concerns</h2>
+						<ul>
+							<li>Overlapping windows (distortion and concurrency)</li>
+							<li>Annual seasonality</li>
+							<li>Overfit (e.g. only using NYC data)</li>
+							<li>Computational budget (edge computing?) </li>
+						</ul>
+					</section>
+				</section>
+				<section>
+					<section>
+						<h2>Model adaptability</h2>
+						<ul>
+							<li> What if we add new fields to our data?</li>
+							<li> How can we personalize the experience?</li>
+							<li> How can we incorporate user-feedback? </li>
+						</ul>
+					</section>
+					<section data-auto-animate>
+						<h2>Adding fields</h2>
+						<p>A single binary field would split data into two.
+							So could try training two models.
+						</p>
+						<p class="fragment">A single $n$-ary field would split data into $n$ components.
+							So ...
+						</p>
+					</section>
+					<section data-auto-animate>
+						<h2>Adding fields</h2>
+						<p class="fragment fade-in-then-semi-out">we cluster.
+							<img src="images/clustering.png">
+						</p>
+						<p class="fragment">or just redesign the model.</p>
+					</section>
+					<section>
+						<h2>Personalized anomaly detection</h2>
+						<p>Example: Daily water usage</p>
+						<ol>
+							<li> Monitor sample mean/variance</li>
+							<li> When converge drop old data (sliding window)</li>
+						</ol>
+						<p>More generally, we would do Bayesian updates to a probabilistic model
+							$$
+								\Pr(\theta \mid x_t) = \frac{\Pr(x_t \mid \theta) \Pr(\theta) }{\Pr(x_t)} 
+							$$
+						</p>
+					</section>
+					<section data-auto-animate>
+						<h2>User feedback</h2>
+						<img src="images/feedback.svg">
+					</section>
+					<section data-auto-animate>
+						<h2> User feedback </h2>
+						<!--Imagine an ensemble of models trained on different subsets of our data set.
+						Naively, each model is equally good.  
+						However, we can use user-feedback to update this naive prior.-->
+						<p>
+							Imagine we have two models. We'd like to know which one is better for a given
+							household.
+							This is identical to estimating the probability 
+							of flipping heads on a (biased) coin.
+						</p>
+					</section>
+					<section>
+						<h2> Coin flips </h2>
+						<p>
+							If we have a coin with an unknown bias $\theta \in [0,1]$
+							we can assume a prior-distribution on $\theta$ of the form.
+							\[
+								\Pr(\theta) \propto \theta^{\alpha-1} (1-\theta)^{\beta-1}
+							\]
+							After one coin flip landing heads we do a Bayesian update to get
+							\[
+								\Pr(\theta | X_1=H) = \theta^{(\alpha+1)-1} (1-\theta)^{\beta-1}
+							\]
+						</p>
+					</section>
+					<section>
+						<h2> Coin flips (cont) </h2>
+						<div class="r-stack">
+							<img class="fragment", src="images/beta/iterations_0.jpeg">
+							<img class="fragment", src="images/beta/iterations_1.jpeg">
+							<img class="fragment", src="images/beta/iterations_2.jpeg">
+							<img class="fragment", src="images/beta/iterations_3.jpeg">
+							<img class="fragment", src="images/beta/iterations_4.jpeg">
+							<img class="fragment", src="images/beta/iterations_5.jpeg">
+							<img class="fragment", src="images/beta/iterations_6.jpeg">
+							<img class="fragment", src="images/beta/iterations_7.jpeg">
+							<img class="fragment", src="images/beta/iterations_8.jpeg">
+							<img class="fragment", src="images/beta/iterations_9.jpeg">
+							<img class="fragment", src="images/beta/iterations_10.jpeg">
+							<img class="fragment", src="images/beta/iterations_11.jpeg">
+							<img class="fragment", src="images/beta/iterations_111.jpeg">
+						</div>
+
+					</section>
+
+				</section>
+				<section>
+					<h2>Summary (tldr)</h2>
+					<ul>
+						<li class="fragment fade-in-then-semi-out">Calibrate via direct measurment</li>
+						<li class="fragment fade-in-then-semi-out">1D image-processing... meh.</li>
+						<li class="fragment fade-in-then-semi-out">event based model... yay.</li>
+						<li class="fragment fade-in-then-semi-out">clustering saves us from training too many models</li>
+						<li class="fragment fade-in-then-semi-out">coin flip math to incorporate user feedback</li>
+					</ul>
+				</section>
+				<section>
+					<h1>The end</h1>
+					<iframe src="https://giphy.com/embed/l0Ex3TbuoETxNAMfe" width="480" height="270" frameBorder="0" class="giphy-embed" allowFullScreen></iframe>
+					<p style="font-size:15px"><a href="https://giphy.com/gifs/animation-2d-l0Ex3TbuoETxNAMfe"> Amanda Bonaito via GIPHY</a></p>
+				</section>
+
+			</div>
+		</div>
+
+		<script src="dist/reveal.js"></script>
+		<script src="plugin/notes/notes.js"></script>
+		<script src="plugin/markdown/markdown.js"></script>
+		<script src="plugin/highlight/highlight.js"></script>
+		<script src="plugin/math/math.js"></script>
+		<script>
+			// More info about initialization & config:
+			// - https://revealjs.com/initialization/
+			// - https://revealjs.com/config/
+			Reveal.initialize({
+				slideNumber: true,
+				hash: true,
+				math: {
+					mathjax: 'https://cdn.jsdelivr.net/gh/mathjax/mathjax@2.7.8/MathJax.js',
+					config: 'TeX-AMS_HTML-full',
+					TeX: {Macros: {RR: "{\\bf R}"}}
+				},
+				// Learn about plugins: https://revealjs.com/plugins/
+				plugins: [ RevealMarkdown, RevealHighlight, RevealNotes, RevealMath]
+			});
+		</script>
+	</body>
+</html>
