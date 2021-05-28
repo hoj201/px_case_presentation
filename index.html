@@ -24,67 +24,55 @@
 					<p style="font-size:12px"><a href="https://giphy.com/gifs/animation-2d-l0Ex3TbuoETxNAMfe"> animation by Amanda Bonaito</a></p>
 				</section>
 				<section>
-					<h2>TLDR</h2>
+					<h2>Summary</h2>
 					<ul>
-						<li class="fragment fade-in-then-semi-out">Calibrate via direct measurment</li>
-						<li class="fragment fade-in-then-semi-out">1D image-processing... meh.</li>
-						<li class="fragment fade-in-then-semi-out">event based model... yay.</li>
-						<li class="fragment fade-in-then-semi-out">clustering saves us from training too many models</li>
-						<li class="fragment fade-in-then-semi-out">coin-flip math to incorporate user-feedback</li>
+						<li class="fragment fade-in-then-semi-out">Calibration</li>
+						<li class="fragment fade-in-then-semi-out">Plato</li>
+						<li class="fragment fade-in-then-semi-out">Mediocre ideas</li>
+						<li class="fragment fade-in-then-semi-out">dog detection</li>
+						<li class="fragment fade-in-then-semi-out">Convolution</li>
+						<li class="fragment fade-in-then-semi-out">Two-face</li>
 					</ul>
 				</section>
 				<section>
 					<section>
 						<h2> Calibration</h2>
 						<ol>
-							<li> <p class="fragment highlight-current-red">
-								Press the "Calibration button" on the PowerX app </p> </li>
-							<li> <p class="fragment highlight-current-red"> 
-								Fill the PowerX provided container to fill line. </p> </li>
-							<li> <p class="fragment highlight-current-red"> 
-								Press "Done".</p></li>
+							<li>Press the "Calibration button" on the PowerX app </li>
+							<li> Fill the PowerX provided container to fill line.</li>
+							<li> Press "Done".</li>
+							<li>Repeat $n$ times (perhaps with a different sized bucket)</li>
 						</ol>
 						<img class="r-stretch" src="images/measuring_cup.jpg">
 					</section>
 					<section>
 						<h2>???</h2>
 						<ul>
-							<li>Why not have the user provide pipe-type and dimension?</li>
+							<li>Why not have the user provide pipe-width?</li>
 							<li>How much water?</li>
-							<li>Leaks?</li>
-							<li>Noise?</li>
+							<li>How many repeats?</li>
 						</ul>
 					</section>
-					<section>
-						<h2>How to model sensor noise</h2>
+					<section data-visibility="hidden">
+						<h2>Sensor noise</h2>
 						<ol>
-							<li> Observe sensor readings against known quantity of fluid</li>
+							<li> Estimate standard-error of readings</li>
 							<li> Randomize over devices/pipes/faucets </li>
-							<li> Fit a classical distribution to the data</li>
 						</ol>
-						[image of Gamma fit fit]
-						Given this you can run the statistical test:
-						What what is the probability of a calibrated device having an average error of \> 1\%
+						<img src="images/gammas.svg">
 					</section>
 				</section>
 				<section>
-					<h2>Plato's Cave</h2>
+					<h2>Inference</h2>
 						<div class="r-stack">
-							<img class="fragment fade-in-then-out" src="images/plato.svg">
-							<img class="fragment fade-in-then-out" src="images/plato_triangle.svg">
-							<img class="fragment fade-in-then-out" src="images/plato_broken.svg">
+							<img style="height:300px" class="fragment fade-in-then-out" src="https://upload.wikimedia.org/wikipedia/commons/b/b1/Platon_Cave_Sanraedam_1604.jpg">
+							<img class="r-stretch fragment fade-in-then-out" src="images/plato.svg">
+							<img class="r-stretch fragment fade-in-then-out" src="images/plato_triangle.svg">
+							<img class="r-stretch fragment fade-in-then-out" src="images/plato_broken.svg">
 						</div>
 				</section>				
 				<section data-markdown>
 					<textarea data-template>
-						## ML @ Power X
-						X = "sensor readings"
-
-						Y = "time windows when an outlet is active + water usage"
-
-						![water_usage](https://www.epa.gov/sites/production/files/styles/medium/public/2017-02/ws-ourwater-water-pie-chart-version-two_0.png)
-
-						---
 						## ML @ Power X
 						```json
 						X = [0, 0, 22, ...], t=[datetime(year=2021...
@@ -92,18 +80,20 @@
 
 						```python
 						Y = {
-							"class": {"washer": 0.1, "faucet": 0.2, "dishwasher":0.7},
+							"class": {"washer": 0.0, "faucet": 1.0, "dishwasher":0.0},
 							"start": datetime(year=2021,
 								month=5, day=24, hour=5,
 								minute=23, second=3,
-								timezone='UTC')
+								timezone='UTC'),
 							"end": datetime(year=2021,
 								month=5, day=24, hour=5,
 								minute=24, second=38,
-								timezone='UTC')
+								timezone='UTC'),
+							"water-usage": 3420
 						},
 						...
 						```
+						<p style="font-size:20px"> - Windows can overlap</p>
 						---
 						## Consider
 
@@ -130,7 +120,7 @@
 					<img src="https://i.imgur.com/5Q0aq82.jpg">
 					<p>from arXiv/abs/1506.02640</p>
 					</section>
-					<section>
+					<section data-visibility="hidden">
 					<h2>Spotify inspired</h2>
 
 					<img src="images/640px-Spectrogram-19thC.png">
@@ -142,24 +132,28 @@
 					<section>
 						<h2>Critiques of CV inspired models</h2>
 						<ul>
-							<li><p> events must conclude prior to prediction </p></li>
-							<li><p class="fragment"> munges arbitrary timescales </p></li>
+							<li><p> streams are not fixed-length arrays </p></li>
 							<li><p class="fragment"> might perform badly for events with variable time-scales (e.g. showers) </p></li>
-							<li><p class="fragment"> opaque </p></li>
+							<li><p class="fragment"> hard to debug (not modular) </p></li>
 						</ul>
 					</section>
 				</section>
 				<section>
 					<section>
-						<h2>Proposed solution</h2>
+						<h1 class="r-fit-text">Event based model</h1>
+					</section>
+					<section>
+						<h2>Event based model</h2>
+						As data arrives:
 						<ol>
-							<li>Detect start times.</li>
-							<li>Given a start time, detect end time.</li>
+							<li>Detect when windows start</li>
+							<ul class="fragment" ><li> Classify open-ended window </li></ul>
+							<li>Detect end-times</li>
 							<li>Classify the outlet type and water-usage.</li>
 						</ol>
 					</section>
 					<section>
-						<h2>Architecture</h2>
+						<h3>Architecture</h3>
 						<img class="r-fit-image" src="images/pipeline.svg">
 						<!-- ideally each process should be $O(1)$ in space and time -->
 					</section>
@@ -168,7 +162,7 @@
 							<p>
 							Consider a convolution $x \stackrel{\kappa}{\mapsto} z$
 							$$
-								z(t) = \sum_{k=0}^{N} \kappa(k) x(t-k)
+								z(t) = \kappa_0 x(t) + \kappa_1 x(t-1) + \dots + \kappa_{10} x(t-10)
 							$$
 						</p>
 					</section>
@@ -178,51 +172,56 @@
 					</section>
 					<section>
 						<h2>Open window classification</h2>
-						RNN, rolling-window CNN, combination of both.
-						<img src="images/Basic-RNN-structure.ppm">
-						<img src="images/pipeline.svg">
-					</section>
-					<section>
-						<h2>End time detection</h2>
-						<iframe src="https://giphy.com/embed/kGhsld1MnajNeGubZ8" width="480" height="300" frameBorder="0" class="giphy-embed" allowFullScreen></iframe>
-						<p style="font-size:15px"><a href="https://giphy.com/gifs/deja-vu-dejavu-dejavuapp-kGhsld1MnajNeGubZ8">via GIPHY</a></p>
-					</section>
-					<section>
-						<h2>Window classification</h2>
 						<div class="fragment">
-						<p>Choose features</p>
+						<p>At each timestep, cobble a feature vector</p>
 						<ul>
-							<li>window length</li>
-							<li>initial/final jump size</li>
-							<li>total water consumed (??)</li>
-							<li>max/min/mean values of convolved signal</li>
+							<li>current window length</li>
+							<li>initial jump size</li>
+							<li>water consumed thus far (??)</li>
+							<li>max/min/mean/variance values of convolved signal</li>
 							<li> ... </li>
 						</ul>
 						</div>
 						<p class="fragment">Then use logistic regression on $\mathbb{R}^n$.</p>
+						<p class="fragment" style="font-size: small;">(or use a recurrant neural network)</p>
 					</section>
+					<section>
+						<h2>End time detection</h2>
+						<iframe class="fragment" src="https://giphy.com/embed/kGhsld1MnajNeGubZ8" width="480" height="300" frameBorder="0" class="giphy-embed" allowFullScreen></iframe>
+						<p style="font-size:15px"><a href="https://giphy.com/gifs/deja-vu-dejavu-dejavuapp-kGhsld1MnajNeGubZ8">via GIPHY</a></p>
+					</section>
+					<section>
+						<h2>Closed window detection</h2>
+						<p> Same as open-window classification, but with end-time features</p>
+						<iframe class="fragment" src="https://giphy.com/embed/kGhsld1MnajNeGubZ8" width="480" height="300" frameBorder="0" class="giphy-embed" allowFullScreen></iframe>
+						<p style="font-size:15px"><a href="https://giphy.com/gifs/deja-vu-dejavu-dejavuapp-kGhsld1MnajNeGubZ8">via GIPHY</a></p>
+					</section>
+
 					<section>
 						<h2>Overview</h2>
 						<img src="images/pipeline.svg">
+						<p style="font-size:20px;">(be quick)</p>
 					</section>
 					<section>
 						<h2>Concerns</h2>
 						<ul>
-							<li>Overlapping windows (distortion and concurrency)</li>
+							<li>Overlapping windows (rarity and concurrency)</li>
 							<li>Annual seasonality</li>
-							<li>Overfit (e.g. only using NYC data)</li>
-							<li>Computational budget (edge computing?) </li>
+							<li>Regional overfit</li>
+							<li>Insufficient data</li>
+							<li>Cloud orchestration (edge computing?) </li>
 						</ul>
+					</section>
+					<section>
+						<h2>Otherwise...</h2>
+						<img src="https://media.giphy.com/media/AhjXalGPAfJg4/giphy.gif">
 					</section>
 				</section>
 				<section>
 					<section>
 						<h2>Model adaptability</h2>
-						<ul>
-							<li> What if we add new fields to our data?</li>
-							<li> How can we personalize the experience?</li>
-							<li> How can we incorporate user-feedback? </li>
-						</ul>
+						<img class="r-stretch-image" src="https://media.giphy.com/media/WDpgbGctTnxuw/giphy.gif">
+						<p style="font-size:small;">Various ways to avoid retraining models</p>
 					</section>
 					<section data-auto-animate>
 						<h2>Adding fields</h2>
@@ -241,13 +240,13 @@
 						<p class="fragment">or just redesign the model.</p>
 					</section>
 					<section>
-						<h2>Personalized anomaly detection</h2>
+						<h2>Personalization</h2>
 						<p>Example: Daily water usage</p>
-						<ol>
-							<li> Monitor sample mean/variance</li>
-							<li> When converge drop old data (sliding window)</li>
+						<ol class="fragment">
+							<li> Monitor sample mean/variance on a sliding window</li>
+							<li> Grow window until convergence (or give-up)</li>
 						</ol>
-						<p>More generally, we would do Bayesian updates to a probabilistic model
+						<p class="fragment">More generally, we would do Bayesian updates to a probabilistic model
 							$$
 								\Pr(\theta \mid x_t) = \frac{\Pr(x_t \mid \theta) \Pr(\theta) }{\Pr(x_t)} 
 							$$
@@ -259,29 +258,55 @@
 					</section>
 					<section data-auto-animate>
 						<h2> User feedback </h2>
-						<!--Imagine an ensemble of models trained on different subsets of our data set.
-						Naively, each model is equally good.  
-						However, we can use user-feedback to update this naive prior.-->
 						<p>
-							Imagine we have two models. We'd like to know which one is better for a given
-							household.
+							Imagine we have two models. We'd like to know which one is better
+						</p>
+						<img src="images/feedback.svg", style="width:100px">
+						<p class="fragment">
 							This is identical to estimating the probability 
 							of flipping heads on a (biased) coin.
 						</p>
 					</section>
 					<section>
+						<h2> Coin flips</h2>
+						<img src="images/smilingtwoface1.jpg">
+					</section>
+					<section data-auto-animate>
 						<h2> Coin flips </h2>
 						<p>
-							If we have a coin with an unknown bias $\theta \in [0,1]$
-							we can assume a prior-distribution on $\theta$ of the form.
-							\[
-								\Pr(\theta) \propto \theta^{\alpha-1} (1-\theta)^{\beta-1}
-							\]
-							After one coin flip landing heads we do a Bayesian update to get
-							\[
-								\Pr(\theta | X_1=H) = \theta^{(\alpha+1)-1} (1-\theta)^{\beta-1}
-							\]
+							If we have a coin with an unknown bias $0 \leq \theta \leq 1$
+							distributed according to $\Pr(\theta) = 1$
 						</p>
+						<img src="images/beta/iterations_0.jpeg">
+						<p class="fragment">
+						 and flip the coin once.
+						</p>
+					</section>
+					<section data-auto-animate>
+						<h2> Coin flips </h2>
+						<div class="r-stack">
+						<p class="fragment fade-in-then-out">
+							If it's heads then
+							\[
+								\Pr(\theta | X_0 = \text{heads}) = \theta
+							\]
+							<img src="images/heads.svg">
+						</p>
+						<p class="fragment fade-in-then-out">
+							If it's tails then
+							\[
+								\Pr(\theta | X_0 = \text{tails}) = 1-\theta
+							\]
+							<img src="images/tails.svg">
+						</p>
+						<p class="fragment fade-in-then-out">
+							After many tosses
+							\[
+								\Pr( \theta | N_T, N_H) = \theta^{N_T} (1-\theta)^{N_H} 
+							\]
+							<img src="images/beta/iterations_111.jpeg">
+						</p>
+						</div>
 					</section>
 					<section>
 						<h2> Coin flips (cont) </h2>
@@ -296,22 +321,23 @@
 							<img class="fragment", src="images/beta/iterations_7.jpeg">
 							<img class="fragment", src="images/beta/iterations_8.jpeg">
 							<img class="fragment", src="images/beta/iterations_9.jpeg">
-							<img class="fragment", src="images/beta/iterations_10.jpeg">
-							<img class="fragment", src="images/beta/iterations_11.jpeg">
 							<img class="fragment", src="images/beta/iterations_111.jpeg">
 						</div>
-
 					</section>
-
+					<section>
+						<h2> feedback </h2>
+						<img src="images/feedback.svg">
+					</section>
 				</section>
 				<section>
-					<h2>Summary (tldr)</h2>
+					<h2>Summary</h2>
 					<ul>
-						<li class="fragment fade-in-then-semi-out">Calibrate via direct measurment</li>
-						<li class="fragment fade-in-then-semi-out">1D image-processing... meh.</li>
-						<li class="fragment fade-in-then-semi-out">event based model... yay.</li>
-						<li class="fragment fade-in-then-semi-out">clustering saves us from training too many models</li>
-						<li class="fragment fade-in-then-semi-out">coin flip math to incorporate user feedback</li>
+						<li class="fragment fade-in-then-semi-out">Calibration</li>
+						<li class="fragment fade-in-then-semi-out">Plato</li>
+						<li class="fragment fade-in-then-semi-out">Mediocre ideas</li>
+						<li class="fragment fade-in-then-semi-out">dog detection</li>
+						<li class="fragment fade-in-then-semi-out">Convolution</li>
+						<li class="fragment fade-in-then-semi-out">Two-face</li>
 					</ul>
 				</section>
 				<section>
@@ -328,6 +354,7 @@
 		<script src="plugin/markdown/markdown.js"></script>
 		<script src="plugin/highlight/highlight.js"></script>
 		<script src="plugin/math/math.js"></script>
+		<script src="plugin/spotlight/spotlight.js"></script>
 		<script>
 			// More info about initialization & config:
 			// - https://revealjs.com/initialization/
@@ -340,8 +367,11 @@
 					config: 'TeX-AMS_HTML-full',
 					TeX: {Macros: {RR: "{\\bf R}"}}
 				},
+				spotlight: {
+					size: 100
+				},
 				// Learn about plugins: https://revealjs.com/plugins/
-				plugins: [ RevealMarkdown, RevealHighlight, RevealNotes, RevealMath]
+				plugins: [ RevealMarkdown, RevealHighlight, RevealNotes, RevealMath, RevealSpotlight]
 			});
 		</script>
 	</body>
